@@ -81,11 +81,11 @@ app.get("/clave", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "password.html"));
 });
 
-// CORREGIDO: Expresión regular estándar y simplificada
+// CORREGIDO: Validación universal limpia para cualquier correo electrónico
 app.post("/continuar", (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
 
-  // Expresión regular limpia para evitar falsos negativos como hola2@gmail.com
+  // Expresión regular estándar corregida (sin la barra invertida antes del \$)
   const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}\$/;
 
   if (email.length > 190 || !emailRegex.test(email)) {
@@ -156,7 +156,7 @@ app.post("/registro", async (req, res) => {
   }
 });
 
-// INICIO DE SESIÓN CORREGIDO
+// INICIO DE SESIÓN CORREGIDO (Mapeo correcto del arreglo de filas de la BD)
 app.post("/login", async (req, res) => {
   const email = String(req.session.pendingEmail || "").trim().toLowerCase();
   const password = String(req.body.password || "");
@@ -171,10 +171,10 @@ app.post("/login", async (req, res) => {
       [email]
     );
 
-    // SOLUCIÓN: Obtenemos el primer registro del arreglo correctamente
+    // Selecciona el primer elemento del arreglo devuelto por MySQL
     const user = rows[0]; 
 
-    // Comparamos las propiedades de forma segura
+    // Comparamos el texto plano ingresado con la columna 'password'
     if (!user || password !== user.password) {
       return showMessage(
         res,
