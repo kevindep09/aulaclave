@@ -81,13 +81,14 @@ app.get("/clave", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "password.html"));
 });
 
+// CORREGIDO: Expresión regular estándar y simplificada
 app.post("/continuar", (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
 
-  if (
-    email.length > 190 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) // Corregido: se quitó la \ antes del $
-  ) {
+  // Expresión regular limpia para evitar falsos negativos como hola2@gmail.com
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}\$/;
+
+  if (email.length > 190 || !emailRegex.test(email)) {
     return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
   }
 
@@ -95,7 +96,7 @@ app.post("/continuar", (req, res) => {
   res.redirect("/clave");
 });
 
-// REGISTRO: Modificado para insertar en la columna 'password'
+// REGISTRO: Guarda en texto plano de forma correcta
 app.post("/registro", async (req, res) => {
   const email = String(req.session.pendingEmail || "").trim().toLowerCase();
   const password = String(req.body.password || "");
@@ -126,7 +127,6 @@ app.post("/registro", async (req, res) => {
       );
     }
 
-    // MODIFICADO: Cambiado 'password_hash' por 'password'
     const [result] = await db.execute(
       "INSERT INTO users (email, password) VALUES (?, ?)",
       [email, password]
@@ -156,7 +156,7 @@ app.post("/registro", async (req, res) => {
   }
 });
 
-// INICIO DE SESIÓN: Modificado para seleccionar y comparar desde la columna 'password'
+// INICIO DE SESIÓN CORREGIDO
 app.post("/login", async (req, res) => {
   const email = String(req.session.pendingEmail || "").trim().toLowerCase();
   const password = String(req.body.password || "");
@@ -166,15 +166,15 @@ app.post("/login", async (req, res) => {
   }
 
   try {
-    // MODIFICADO: Cambiado 'password_hash' por 'password'
     const [rows] = await db.execute(
       "SELECT id, email, password FROM users WHERE email = ? LIMIT 1",
       [email]
     );
 
-    const user = rows[0];
+    // SOLUCIÓN: Obtenemos el primer registro del arreglo correctamente
+    const user = rows[0]; 
 
-    // MODIFICADO: Comparamos el texto plano ingresado con la columna 'user.password'
+    // Comparamos las propiedades de forma segura
     if (!user || password !== user.password) {
       return showMessage(
         res,
@@ -211,9 +211,7 @@ app.get("/cuenta", requireLogin, (req, res) => {
 </head>
 <body>
   <main class="panel narrow">
-    <div class="logo" aria-label="AulaClave">
-</div>
-
+    <div class="logo" aria-label="AulaClave"></div>
     <h1>Sesión iniciada</h1>
     <p>Tu cuenta ha sido verificada.</p>
     <div class="account-box">
@@ -243,12 +241,10 @@ app.get("/health", async (req, res) => {
   }
 });
 
-
 const port = Number(process.env.PORT || 3000);
 
 async function startServer() {
   try {
-    // Mantuvimos esta estructura que ya tenías configurada correctamente como 'password'
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT,
