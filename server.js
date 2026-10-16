@@ -7,6 +7,11 @@ const db = require("./db");
 
 const app = express();
 
+// Permite que Express reconozca el HTTPS de Railway.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 
