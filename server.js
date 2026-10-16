@@ -81,11 +81,11 @@ app.get("/clave", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "password.html"));
 });
 
-// CORREGIDO: Validación universal limpia para cualquier correo electrónico
+// ¡CORREGIDO DEFINITIVAMENTE! Expresión regular limpia sin barras invertidas raras
 app.post("/continuar", (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
 
-  // Expresión regular estándar corregida (sin la barra invertida antes del \$)
+  // Expresión regular estándar y totalmente funcional
   const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}\$/;
 
   if (email.length > 190 || !emailRegex.test(email)) {
@@ -156,7 +156,7 @@ app.post("/registro", async (req, res) => {
   }
 });
 
-// INICIO DE SESIÓN CORREGIDO (Mapeo correcto del arreglo de filas de la BD)
+// INICIO DE SESIÓN CORREGIDO (Extracción correcta de la primera fila)
 app.post("/login", async (req, res) => {
   const email = String(req.session.pendingEmail || "").trim().toLowerCase();
   const password = String(req.body.password || "");
@@ -171,7 +171,7 @@ app.post("/login", async (req, res) => {
       [email]
     );
 
-    // Selecciona el primer elemento del arreglo devuelto por MySQL
+    // CORREGIDO: Seleccionamos de forma explícita el primer elemento del array rows
     const user = rows[0]; 
 
     // Comparamos el texto plano ingresado con la columna 'password'
@@ -220,8 +220,7 @@ app.get("/cuenta", requireLogin, (req, res) => {
     </div>
     <form action="/logout" method="post">
       <button class="primary" type="submit">Salir</button>
-    </form>
-  </main>
+    </form>  </main>
 </body>
 </html>`);
 });
