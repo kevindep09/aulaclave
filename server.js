@@ -81,14 +81,24 @@ app.get("/clave", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "password.html"));
 });
 
-// SOLUCIÓN AL ERROR: Expresión regular estándar y corregida sin caracteres basura al final
+// GARANTIZADO: Cero Expresiones Regulares. Validación lógica directa.
 app.post("/continuar", (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
 
-  // Expresión regular universal para correos electrónicos
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\$/;
+  // 1. Validamos longitud básica
+  if (!email || email.length > 190 || email.length < 5) {
+    return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
+  }
 
-  if (email.length > 190 || !emailRegex.test(email)) {
+  // 2. Comprobamos que tenga una estructura básica de correo: un '@' y al menos un '.'
+  if (!email.includes("@") || !email.includes(".")) {
+    return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
+  }
+
+  // 3. Separamos para verificar que haya texto después del punto
+  const partes = email.split(".");
+  const extension = partes[partes.length - 1];
+  if (extension.length < 2) {
     return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
   }
 
