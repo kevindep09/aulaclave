@@ -40,7 +40,7 @@ function escapeHtml(value) {
     "<": "&lt;",
     ">": "&gt;",
     '"': "&quot;",
-    "'": "&#39;"
+    "'": "'"
   }[character]));
 }
 
@@ -86,7 +86,7 @@ app.post("/continuar", (req, res) => {
 
   if (
     email.length > 190 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+\$/.test(email)
   ) {
     return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
   }
@@ -95,7 +95,7 @@ app.post("/continuar", (req, res) => {
   res.redirect("/clave");
 });
 
-// REGISTRO: Guarda la contraseña en texto plano
+// REGISTRO: Modificado para insertar en la columna 'password'
 app.post("/registro", async (req, res) => {
   const email = String(req.session.pendingEmail || "").trim().toLowerCase();
   const password = String(req.body.password || "");
@@ -126,9 +126,9 @@ app.post("/registro", async (req, res) => {
       );
     }
 
-    // Guardamos la contraseña en texto plano (puedes cambiar 'password_hash' por 'password' en tu BD si gustas)
+    // MODIFICADO: Cambiado 'password_hash' por 'password'
     const [result] = await db.execute(
-      "INSERT INTO users (email, password_hash) VALUES (?, ?)",
+      "INSERT INTO users (email, password) VALUES (?, ?)",
       [email, password]
     );
 
@@ -156,7 +156,7 @@ app.post("/registro", async (req, res) => {
   }
 });
 
-// INICIO DE SESIÓN: Compara texto plano directamente
+// INICIO DE SESIÓN: Modificado para seleccionar y comparar desde la columna 'password'
 app.post("/login", async (req, res) => {
   const email = String(req.session.pendingEmail || "").trim().toLowerCase();
   const password = String(req.body.password || "");
@@ -166,15 +166,16 @@ app.post("/login", async (req, res) => {
   }
 
   try {
+    // MODIFICADO: Cambiado 'password_hash' por 'password'
     const [rows] = await db.execute(
-      "SELECT id, email, password_hash FROM users WHERE email = ? LIMIT 1",
+      "SELECT id, email, password FROM users WHERE email = ? LIMIT 1",
       [email]
     );
 
     const user = rows[0];
 
-    // Comparamos el texto plano ingresado con el texto plano de la base de datos
-    if (!user || password !== user.password_hash) {
+    // MODIFICADO: Comparamos el texto plano ingresado con la columna 'user.password'
+    if (!user || password !== user.password) {
       return showMessage(
         res,
         "No se pudo iniciar sesión",
@@ -247,6 +248,7 @@ const port = Number(process.env.PORT || 3000);
 
 async function startServer() {
   try {
+    // Mantuvimos esta estructura que ya tenías configurada correctamente como 'password'
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT,
