@@ -237,8 +237,33 @@ app.get("/health", async (req, res) => {
   }
 });
 
+
 const port = Number(process.env.PORT || 3000);
 
-app.listen(port, () => {
-  console.log(`AulaClave activo en http://localhost:${port}`);
-});
+async function startServer() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        email VARCHAR(190) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+      )
+    `);
+
+    console.log("Tabla users verificada correctamente.");
+
+    app.listen(port, () => {
+      console.log(`AulaClave activo en http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error(
+      "Error al conectar con MySQL o preparar la tabla users:",
+      error.message
+    );
+    process.exit(1);
+  }
+}
+
+startServer();
