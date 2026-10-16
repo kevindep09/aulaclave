@@ -86,7 +86,7 @@ app.post("/continuar", (req, res) => {
 
   if (
     email.length > 190 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+\$/.test(email)
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) // Corregido: se quitó la \ antes del $
   ) {
     return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
   }
