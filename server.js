@@ -81,12 +81,12 @@ app.get("/clave", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "password.html"));
 });
 
-// ¡CORREGIDO DEFINITIVAMENTE! Expresión regular limpia sin barras invertidas raras
+// SOLUCIÓN AL ERROR: Expresión regular estándar y corregida sin caracteres basura al final
 app.post("/continuar", (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
 
-  // Expresión regular estándar y totalmente funcional
-  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}\$/;
+  // Expresión regular universal para correos electrónicos
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\$/;
 
   if (email.length > 190 || !emailRegex.test(email)) {
     return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
@@ -171,7 +171,6 @@ app.post("/login", async (req, res) => {
       [email]
     );
 
-    // CORREGIDO: Seleccionamos de forma explícita el primer elemento del array rows
     const user = rows[0]; 
 
     // Comparamos el texto plano ingresado con la columna 'password'
