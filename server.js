@@ -1,0 +1,244 @@
+require("dotenv").config();
+
+const express = require("express");
+const session = require("express-session");
+const path = require("path");
+const db = require("./db");
+
+const app = express();
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "clave-local-solo-para-demostracion",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 1000
+  }
+}));
+
+function requireLogin(req, res, next) {
+  if (!req.session.userId) {
+    return res.redirect("/");
+  }
+  next();
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[character]));
+}
+
+function showMessage(res, title, message, status = 400) {
+  return res.status(status).send(`<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} · AulaClave</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="panel narrow">
+    <div class="brand-mark">A</div>
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(message)}</p>
+    <p><a href="/clave">Volver a intentarlo</a></p>
+    <p><a href="/">Volver al inicio</a></p>
+  </main>
+</body>
+</html>`);
+}
+
+app.get("/", (req, res) => {
+  if (req.session.userId) {
+    return res.redirect("/cuenta");
+  }
+
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.get("/clave", (req, res) => {
+  if (!req.session.pendingEmail) {
+    return res.redirect("/");
+  }
+
+  res.sendFile(path.join(__dirname, "public", "password.html"));
+});
+
+app.post("/continuar", (req, res) => {
+  const email = String(req.body.email || "").trim().toLowerCase();
+
+  if (
+    email.length > 190 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    return showMessage(res, "Correo no válido", "Introduce un correo electrónico válido.");
+  }
+
+  req.session.pendingEmail = email;
+  res.redirect("/clave");
+});
+
+// REGISTRO: Guarda la contraseña en texto plano
+app.post("/registro", async (req, res) => {
+  const email = String(req.session.pendingEmail || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+
+  if (!email) {
+    return res.redirect("/");
+  }
+
+  if (password.length < 8 || password.length > 128) {
+    return showMessage(
+      res,
+      "Contraseña no válida",
+      "La contraseña debe tener entre 8 y 128 caracteres."
+    );
+  }
+
+  try {
+    const [existing] = await db.execute(
+      "SELECT id FROM users WHERE email = ? LIMIT 1",
+      [email]
+    );
+
+    if (existing.length > 0) {
+      return showMessage(
+        res,
+        "La cuenta ya existe",
+        "Ese correo ya está registrado. Usa Iniciar sesión."
+      );
+    }
+
+    // Guardamos la contraseña en texto plano (puedes cambiar 'password_hash' por 'password' en tu BD si gustas)
+    const [result] = await db.execute(
+      "INSERT INTO users (email, password_hash) VALUES (?, ?)",
+      [email, password]
+    );
+
+    req.session.userId = result.insertId;
+    req.session.email = email;
+    delete req.session.pendingEmail;
+
+    res.redirect("/cuenta");
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return showMessage(
+        res,
+        "La cuenta ya existe",
+        "Ese correo ya está registrado. Inicia sesión."
+      );
+    }
+
+    console.error("Error al registrar usuario:", error.message);
+    return showMessage(
+      res,
+      "Error de registro",
+      "No se pudo guardar la cuenta. Revisa la conexión con MySQL.",
+      500
+    );
+  }
+});
+
+// INICIO DE SESIÓN: Compara texto plano directamente
+app.post("/login", async (req, res) => {
+  const email = String(req.session.pendingEmail || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+
+  if (!email || !password) {
+    return res.redirect("/");
+  }
+
+  try {
+    const [rows] = await db.execute(
+      "SELECT id, email, password_hash FROM users WHERE email = ? LIMIT 1",
+      [email]
+    );
+
+    const user = rows[0];
+
+    // Comparamos el texto plano ingresado con el texto plano de la base de datos
+    if (!user || password !== user.password_hash) {
+      return showMessage(
+        res,
+        "No se pudo iniciar sesión",
+        "Comprueba el correo y la contraseña de tu cuenta de AulaClave.",
+        401
+      );
+    }
+
+    req.session.userId = user.id;
+    req.session.email = user.email;
+    delete req.session.pendingEmail;
+
+    res.redirect("/cuenta");
+  } catch (error) {
+    console.error("Error al iniciar sesión:", error.message);
+    return showMessage(
+      res,
+      "Error de conexión",
+      "No se pudo consultar la base de datos.",
+      500
+    );
+  }
+});
+
+app.get("/cuenta", requireLogin, (req, res) => {
+  res.send(`<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi cuenta · AulaClave</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="panel narrow">
+    <div class="logo" aria-label="AulaClave">
+</div>
+
+    <h1>Sesión iniciada</h1>
+    <p>Tu cuenta ha sido verificada.</p>
+    <div class="account-box">
+      <span>Correo verificado</span>
+      <strong>${escapeHtml(req.session.email)}</strong>
+    </div>
+    <form action="/logout" method="post">
+      <button class="primary" type="submit">Salir</button>
+    </form>
+  </main>
+</body>
+</html>`);
+});
+
+app.post("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/");
+  });
+});
+
+app.get("/health", async (req, res) => {
+  try {
+    await db.query("SELECT 1");
+    res.json({ ok: true, database: "connected" });
+  } catch (error) {
+    res.status(500).json({ ok: false, database: "disconnected" });
+  }
+});
+
+const port = Number(process.env.PORT || 3000);
+
+app.listen(port, () => {
+  console.log(`AulaClave activo en http://localhost:${port}`);
+});

